@@ -1,0 +1,169 @@
+imports:
+    - { resource: parameters.yml }
+    - { resource: security.yml }
+
+services:
+    doctrine_dbal_platform:
+        class: Doctrine\DBAL\Platforms\MySqlPlatform
+
+framework:
+    # http://blog.eleven-labs.com/symfony-2-cache-http-esi/
+    fragments:       { path: /_proxy }
+    esi:             true
+    translator:      { fallback: %locale% }
+    secret:          %secret%
+    router:
+        resource: "%kernel.root_dir%/config/routing.yml"
+        strict_requirements: ~
+    form:            ~
+    csrf_protection: ~
+    validation:      { enable_annotations: true }
+    templating:
+        engines: ['twig']
+        assets_version: v20160317A
+    default_locale:  "%locale%"
+    trusted_proxies: [192.0.0.1]
+    session:
+        handler_id:     session.handler.pdo
+        name: "self"
+        #save_path: "%kernel.root_dir%/sessions"
+    http_method_override: true
+
+parameters:
+    pdo.db_options:
+        db_table:    session_pdo
+        db_id_col:   session_id
+        db_data_col: session_value
+        db_time_col: session_time
+
+# Twig Configuration
+twig:
+    debug:            %kernel.debug%
+    strict_variables: %kernel.debug%
+    globals:
+        faye_server: %faye_server.endpoint%
+
+# Assetic Configuration
+assetic:
+    debug:          %kernel.debug%
+    use_controller: false
+    bundles:        ["InnovaSelfBundle"]
+    java: /usr/bin/java
+    filters:
+        cssrewrite: ~
+        yui_css:
+            jar: "%kernel.root_dir%/Resources/java/yuicompressor-2.4.8.jar"
+        yui_js:
+            jar: "%kernel.root_dir%/Resources/java/yuicompressor-2.4.8.jar"
+
+# Doctrine Configuration
+doctrine:
+    dbal:
+        driver:   %database_driver%
+        host:     %database_host%
+        port:     %database_port%
+        dbname:   %database_name%
+        user:     %database_user%
+        password: %database_password%
+        charset:  UTF8
+        platform_service: doctrine_dbal_platform
+        # if using pdo_sqlite as your database driver, add the path in parameters.yml
+        # e.g. database_path: %kernel.root_dir%/data/data.db3
+        # path:     %database_path%
+
+    orm:
+        auto_generate_proxy_classes: %kernel.debug%
+        auto_mapping: true
+
+# Swiftmailer Configuration
+swiftmailer:
+    transport: %mailer_transport%
+    host:      %mailer_host%
+    username:  %mailer_user%
+    password:  %mailer_password%
+    spool:     { type: memory }
+
+fos_user:
+    db_driver: orm # other valid values are 'mongodb', 'couchdb' and 'propel'
+    firewall_name: main
+    user_class: Innova\SelfBundle\Entity\User
+    registration:
+        form:
+            type: innova_selfbundle_user
+    from_email:
+        address:        self@innovalangues.net
+        sender_name:    SELF Innovalangues
+
+stfalcon_tinymce:
+    include_jquery: false
+    tinymce_jquery: true
+    external_plugins:
+        selfemoticon:
+            url: "asset[bundles/innovaself/plugins/selfemoticon/plugin.min.js]"
+        selfsharp:
+            url: "asset[bundles/innovaself/plugins/selfsharp/plugin.min.js]"
+        selffurigana:
+            url: "asset[bundles/innovaself/plugins/selffurigana/plugin.min.js]"
+    theme:
+        # Simple theme: same as default theme
+        # Advanced theme with almost all enabled plugins
+        simple:
+            forced_root_block: false
+            plugins:
+                "charmap advlist autolink link image charmap hr searchreplace visualchars paste selfemoticon"
+            toolbar1: "undo redo | styleselect fontselect | bold italic | alignleft aligncenter alignright alignjustify | charmap selfemoticon selfsharp selffurigana"
+            paste_auto_cleanup_on_paste : true
+            paste_remove_styles: true
+            paste_remove_styles_if_webkit: true
+            paste_text_sticky: true
+            paste_text_sticky_default: true
+            paste_strip_class_attributes: true
+            relative_urls: false
+            font_formats: "kaiti=kaiti"
+
+knp_snappy:
+    pdf:
+        enabled:    true
+        binary:     /usr/local/bin/wkhtmltopdf
+        options:    []
+
+bazinga_js_translation:
+    locale_fallback:      fr
+    default_domain:       messages
+
+lexik_maintenance:
+    #authorized_ips: ['127.0.0.1']                       # option facultative, Adresses autorisées
+    driver:
+        # File driver
+        class: '\Lexik\Bundle\MaintenanceBundle\Drivers\FileDriver'      # Classe pour le FileDriver
+        options: {file_path: %kernel.root_dir%/lock}
+
+liuggio_stats_d_client:
+    monolog:
+        enable: true
+        prefix: 'my-app.log'
+        formatter:
+#       class:               # if you want to change the formatter class.
+#       format:              # if you want to change the format.
+            context_logging: true # if you want additional packets for context.
+            extra_logging: true   # if you want additional packets for extra.
+            words: 2              # the number of the word in the stats key.
+        level: 'warning'
+
+    connection:
+        #    class: Liuggio\StatsdClient\Sender\SocketSender
+        #    debug_class: Liuggio\StatsdClient\Sender\SysLogSender # or EchoSender
+        #    debug: %kernel.debug%   # use false if you want to disable debugging and shot packet over Socket
+        host: %statsd_host%
+        port: %statsd_port%
+        #    protocol: udp
+        #    reduce_packet: true
+        fail_silently: false
+    enable_collector: %statsd_enabled%
+    collectors:
+        liuggio_stats_d_client.collector.dbal: '%statsd_prefix%.query'
+        liuggio_stats_d_client.collector.visitor: '%statsd_prefix%.visitor'
+        liuggio_stats_d_client.collector.memory: '%statsd_prefix%.memory'
+        liuggio_stats_d_client.collector.user: '%statsd_prefix%.user'
+        liuggio_stats_d_client.collector.exception: '%statsd_prefix%.exception'
+        liuggio_stats_d_client.collector.time: '%statsd_prefix%.time'
